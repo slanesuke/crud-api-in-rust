@@ -65,7 +65,23 @@ pub fn handle_client(mut stream: TcpStream) {
 
 /// TODO Handle GET request
 pub fn handle_get_request(req: &str) -> (String, String) {
-    match
+    match (get_id(&req).parse::<i32>(), Client::connect(DB_URL, NoTls)) {
+        (Ok(id), Ok(mut client)) =>
+            match client.query_one("SELECT * FROM users WHERE id = $1", &[&id]) {
+                Ok(row) => {
+                    let user = User {
+                        id: row.get(0),
+                        name: row.get(1),
+                        email: row.get(2),
+                    };
+
+                    (OK_RESP.to_string(), serde_json::to_string(&user).unwrap())
+                }
+                _ => (NOT_FOUND.to_string(), "User not found".to_string()),
+            }
+
+        _ => (INTERNAL_SRV_ERROR.to_string(), "Error".to_string()),
+    }
 }
 
 // Controller
